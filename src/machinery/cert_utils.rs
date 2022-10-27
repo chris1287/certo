@@ -3,28 +3,23 @@ use x509_parser::{
     certificate::X509Certificate,
 };
 use time::format_description;
+use anyhow::{Result, Context};
 
-fn summary(x509: &X509Certificate) -> String {
+fn generate_summary(x509: &X509Certificate) -> Result<String> {
     let mut subject = String::new();
     let mut first = true;
     for cn in x509.subject().iter_common_name() {
-        match cn.as_str() {
-            Ok(cn) => {
-                if !first {
-                    subject.push_str(", ");    
-                }
-                subject.push_str(cn);
-                first = false;
-            },
-            Err(_) => {
-
-            }
-        };
+        let cn = cn.as_str().context("the x509 common name cannot be interpreted as a string")?; 
+        if !first {
+            subject.push_str(", ");    
+        }
+        subject.push_str(cn);
+        first = false;
     }
 
-    let format = format_description::parse("[year]-[month]-[day]").unwrap();
-    let nb = x509.validity().not_before.to_datetime().format(&format).unwrap();
-    let na = x509.validity().not_after.to_datetime().format(&format).unwrap();
+    let format = format_description::parse("[year]-[month]-[day]").context("the date format is invalid")?;
+    let nb = x509.validity().not_before.to_datetime().format(&format).context("the validity date cannot be formatted")?;
+    let na = x509.validity().not_after.to_datetime().format(&format).context("the validity date cannot be formatted")?;
     
     let is_ca: &str;
     if x509.issuer == x509.subject {
@@ -33,25 +28,14 @@ fn summary(x509: &X509Certificate) -> String {
         is_ca = "";
     }
 
-    format!("Subject: {}. Not before: {}. Not after: {}. Serial: {}{}", subject, nb, na, x509.raw_serial_as_string(), is_ca)
+    Ok(format!("Subject: {}. Not before: {}. Not after: {}. Serial: {}{}", subject, nb, na, x509.raw_serial_as_string(), is_ca))
 }
 
-pub fn dump(data: &[u8]) {
+pub fn summarize(data: &[u8]) -> Result<()> {
     for pem in Pem::iter_from_buffer(data) {
-        match pem {
-            Ok(pem) => {
-                match pem.parse_x509() {
-                    Ok(x509) => {
-                        println!("{}", summary(&x509));
-                    },
-                    Err(e) => {
-                        println!("error: {}", e)
-                    }
-                };
-            },
-            Err(e) => {
-                println!("error: {}", e);
-            }
-        }
+        let pem = pem.context("given data cannot be interpreted as PEM")?;
+        let x509 = pem.parse_x509().context("PEM does not contain a valid x509 certificate")?; 
+        println!("{}", generate_summary(&x509).context("x509 summary cannot be generated")?);
     }
+    Ok(())
 }
