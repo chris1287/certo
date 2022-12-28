@@ -5,8 +5,9 @@ use machinery::cert_utils::summarize;
 use anyhow::{Result, Context};
 
 #[derive(Parser)]
+#[command(about = "Pretty-print x509 certificate (or certificate bundle) most relevant information", long_about = None)]
 struct Args {
-    #[arg(short, long)]
+    #[arg(value_name="x509 certificate")]
     cert: std::path::PathBuf,
 }
 

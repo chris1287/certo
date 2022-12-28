@@ -10,3 +10,5 @@ clap = {version="4.0.10", features = ["derive"]}
 x509-parser = "0.14.0"
 time = {version="0.3.11", features = ["formatting"]}
 anyhow = "1.0"
+ansi_term = "0.12.1"
+term_size = "0.3.2"
