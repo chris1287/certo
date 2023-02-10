@@ -8,12 +8,14 @@ use anyhow::{Result, Context};
 #[command(about = "Pretty-print x509 certificate (or certificate bundle) most relevant information", long_about = None)]
 struct Args {
     #[arg(value_name="x509 certificate")]
-    cert: std::path::PathBuf,
+    cert: Vec<std::path::PathBuf>,
 }
 
 fn main() -> Result<()> {
     let args = Args::parse();
-    let data = std::fs::read(args.cert).context("cannot read given file")?;
-    summarize(&data).context("cannot summarize given file")?;
+    for cert in args.cert {
+        let data = std::fs::read(cert).context("cannot read given file")?;
+        summarize(&data).context("cannot summarize given file")?;
+    }
     Ok(())
 }
