@@ -9,13 +9,15 @@ use anyhow::{Result, Context};
 struct Args {
     #[arg(value_name="x509 certificate")]
     cert: Vec<std::path::PathBuf>,
+    #[arg(short, long, help = "Output in a machine-readable format", default_value = "false")]
+    porcelain: bool,
 }
 
 fn main() -> Result<()> {
     let args = Args::parse();
     for cert in args.cert {
         let data = std::fs::read(cert).context("cannot read given file")?;
-        summarize(&data).context("cannot summarize given file")?;
+        summarize(&data, args.porcelain).context("cannot summarize given file")?;
     }
     Ok(())
 }

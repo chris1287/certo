@@ -54,41 +54,48 @@ impl X509CertificateSummary {
     }
 }
 
-fn colored_key(key: &str) -> String {
-    Colour::RGB(249, 38, 114).paint(key).to_string()
-}
-
-fn colored_value(value: &str) -> String {
-    Colour::RGB(0xE6, 0xDB, 0x74).paint(value).to_string()
-}
-
-impl std::fmt::Display for X509CertificateSummary {
-    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
-        let (w, _) = term_size::dimensions().unwrap();
-        write!(f, "{}
-    {}: {}
-    {}: {}
-    {}: {}
-    {}: {}
-    {}: {}
-    {}: {}",
-            std::iter::repeat("─").take(w).collect::<String>(),
-            colored_key("subject"), colored_value(&self.subject),
-            colored_key("issuer"), colored_value(&self.issuer),
-            colored_key("not before"), colored_value(&self.not_before),
-            colored_key("not after"), colored_value(&self.not_after),
-            colored_key("serial number"), colored_value(&self.serial_number),
-            colored_key("self signed"), colored_value(&self.self_signed),
-        )
+fn formatted_key(key: &str, porcelain: bool) -> String {
+    if porcelain {
+        key.to_string()
+    } else {
+        Colour::RGB(249, 38, 114).paint(key).to_string()
     }
 }
 
-pub fn summarize(data: &[u8]) -> Result<()> {
+fn formatted_value(value: &str, porcelain: bool) -> String {
+    if porcelain {
+        value.to_string()
+    } else {
+        Colour::RGB(0xE6, 0xDB, 0x74).paint(value).to_string()
+    }
+}
+
+pub fn formatted_row(key: &str, value: &str, porcelain: bool) -> String {
+    format!("{}: {}", formatted_key(key, porcelain), formatted_value(value, porcelain))
+}
+
+pub fn summarize(data: &[u8], porcelain: bool) -> Result<()> {
     for pem in Pem::iter_from_buffer(data) {
         let pem = pem.context("given data cannot be interpreted as PEM")?;
         let x509 = pem.parse_x509().context("PEM does not contain a valid x509 certificate")?;
         let summary = X509CertificateSummary::new(&x509).context("X509 cannot be summarized")?;
-        println!("{}", summary);
+        let (w, _) = term_size::dimensions().unwrap();
+        print!("{}
+    {}
+    {}
+    {}
+    {}
+    {}
+    {}
+",
+            std::iter::repeat("─").take(w).collect::<String>(),
+            formatted_row("subject", &summary.subject, porcelain),
+            formatted_row("issuer", &summary.issuer, porcelain),
+            formatted_row("not before", &summary.not_before, porcelain),
+            formatted_row("not after", &summary.not_after, porcelain),
+            formatted_row("serial number", &summary.serial_number, porcelain),
+            formatted_row("self signed", &summary.self_signed, porcelain),
+        )
     }
     Ok(())
 }
